@@ -1,0 +1,92 @@
+{
+  "project_info": {
+    "project_number": "466727460031",
+    "project_id": "autenticacion-6a262",
+    "storage_bucket": "autenticacion-6a262.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:466727460031:android:b288a5519a592657a43a0a",
+        "android_client_info": {
+          "package_name": "com.adrianserranoquero.autenticacionfirebase"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "466727460031-qpdompnh49naf5niu6l9g7nilsopjc05.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.adrianserranoquero.autenticacionfirebase",
+            "certificate_hash": "38f6f4ef8fe2bc86d1f19d7a142d7e33c2410d0a"
+          }
+        },
+        {
+          "client_id": "466727460031-6n8ofso20kpu7h7a0imq74fsqabpj372.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFDCgpVN9KNIq0GLpsZ6ZQA0dDD7MgIas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "466727460031-6n8ofso20kpu7h7a0imq74fsqabpj372.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:466727460031:android:61fed26187d8fec3a43a0a",
+        "android_client_info": {
+          "package_name": "com.adrianserranoquero.authapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "466727460031-jam5as3cfekibv7brhjifvnfh808cke8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.adrianserranoquero.authapp",
+            "certificate_hash": "ac5c536b704752065de05f36d6fe326523405943"
+          }
+        },
+        {
+          "client_id": "466727460031-uj3ce8s1fol8ahu5oog2ukgs6ovcot0m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.adrianserranoquero.authapp",
+            "certificate_hash": "38f6f4ef8fe2bc86d1f19d7a142d7e33c2410d0a"
+          }
+        },
+        {
+          "client_id": "466727460031-6n8ofso20kpu7h7a0imq74fsqabpj372.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFDCgpVN9KNIq0GLpsZ6ZQA0dDD7MgIas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "466727460031-6n8ofso20kpu7h7a0imq74fsqabpj372.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
