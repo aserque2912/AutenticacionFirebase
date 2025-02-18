@@ -14,11 +14,15 @@ class HomeViewModel : ViewModel() {
     private val _products = MutableLiveData<List<Map<String, Any>>>(emptyList())
     val products: LiveData<List<Map<String, Any>>> = _products
 
-    fun loadData() {
+    private val _loading = MutableLiveData<Boolean>()
+    val loading: LiveData<Boolean> = _loading
+
+    fun loadData() { _loading.value = true
         viewModelScope.launch {
             firestoreManager.getNotes { _notes.value = it }
             firestoreManager.getProducts { _products.value = it }
         }
+        _loading.value = false
     }
 
     fun addNote(title: String, content: String) {

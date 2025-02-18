@@ -29,6 +29,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
     val firestoreManager = FirestoreManager()
     val notes by viewModel.notes.observeAsState(emptyList())
     val products by viewModel.products.observeAsState((emptyList()))
+    val loading by viewModel.loading.observeAsState(true)
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -41,65 +42,70 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
         viewModel.loadData()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Gestión de Notas y Productos") },
-                actions = {
-                    IconButton(onClick = { showDialog = true }) {
-                        Icon(imageVector = Icons.AutoMirrored.Outlined.ExitToApp, contentDescription = "Cerrar sesión")
+    if (!loading) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Gestión de Notas y Productos") },
+                    actions = {
+                        IconButton(onClick = { showDialog = true }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
+                                contentDescription = "Cerrar sesión"
+                            )
+                        }
+                    }
+                )
+            },
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Button(onClick = { showNoteDialog = true }) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir Nota")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Añadir Nota")
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(onClick = { showProductDialog = true }) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir Producto")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Añadir Producto")
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text("Notas Guardadas:", style = MaterialTheme.typography.headlineSmall)
+                LazyColumn {
+                    items(notes) { note ->
+                        NoteItem(
+                            noteId = note["id"].toString(),
+                            title = note["title"].toString(),
+                            content = note["content"].toString(),
+                            viewModel = viewModel
+                        )
                     }
                 }
-            )
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Button(onClick = { showNoteDialog = true }) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir Nota")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Añadir Nota")
-            }
 
-            Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-            Button(onClick = { showProductDialog = true }) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir Producto")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Añadir Producto")
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text("Notas Guardadas:", style = MaterialTheme.typography.headlineSmall)
-            LazyColumn {
-                items(notes) { note ->
-                    NoteItem(
-                        noteId = note["id"].toString(),
-                        title = note["title"].toString(),
-                        content = note["content"].toString(),
-                        viewModel = viewModel
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text("Productos Guardados:", style = MaterialTheme.typography.headlineSmall)
-            LazyColumn {
-                items(products) { product ->
-                    ProductItem(
-                        productId = product["id"].toString(),
-                        name = product["name"].toString(),
-                        price = product["price"].toString(),
-                        viewModel = viewModel
-                    )
+                Text("Productos Guardados:", style = MaterialTheme.typography.headlineSmall)
+                LazyColumn {
+                    items(products) { product ->
+                        ProductItem(
+                            productId = product["id"].toString(),
+                            name = product["name"].toString(),
+                            price = product["price"].toString(),
+                            viewModel = viewModel
+                        )
+                    }
                 }
             }
         }
@@ -187,7 +193,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
             },
             confirmButton = {
                 Button(onClick = {
-                    viewModel.addProduct( productName, productPrice.toDoubleOrNull() ?: 0.0)
+                    viewModel.addProduct(productName, productPrice.toDoubleOrNull() ?: 0.0)
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar("Producto añadido")
                     }
