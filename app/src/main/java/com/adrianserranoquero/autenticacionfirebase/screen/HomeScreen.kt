@@ -8,6 +8,7 @@ import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -15,18 +16,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.adrianserranoquero.autenticacionfirebase.data.AuthManager
 import com.adrianserranoquero.autenticacionfirebase.data.FirestoreManager
+import com.adrianserranoquero.autenticacionfirebase.data.HomeViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit) {
+fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeViewModel) {
     var showDialog by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
     var showProductDialog by remember { mutableStateOf(false) }
     val user = auth.getCurrentUser()
     val firestoreManager = FirestoreManager()
-    var notes by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
-    var products by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    val notes by viewModel.notes.observeAsState(emptyList())
+    val products by viewModel.products.observeAsState((emptyList()))
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -36,8 +38,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit) {
     var productPrice by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        firestoreManager.getNotes { notes = it }
-        firestoreManager.getProducts { products = it }
+        viewModel.loadData()
     }
 
     Scaffold(
@@ -83,7 +84,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit) {
                         noteId = note["id"].toString(),
                         title = note["title"].toString(),
                         content = note["content"].toString(),
-                        firestoreManager = firestoreManager
+                        viewModel = viewModel
                     )
                 }
             }
@@ -97,7 +98,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit) {
                         productId = product["id"].toString(),
                         name = product["name"].toString(),
                         price = product["price"].toString(),
-                        firestoreManager = firestoreManager
+                        viewModel = viewModel
                     )
                 }
             }
@@ -151,7 +152,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit) {
                     firestoreManager.addNote(noteTitle, noteContent)
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar("Nota añadida")
-                        firestoreManager.getNotes { notes = it }
+                        viewModel.addNote(noteTitle, noteContent)
                     }
                     showNoteDialog = false
                 }) {
@@ -186,10 +187,9 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit) {
             },
             confirmButton = {
                 Button(onClick = {
-                    firestoreManager.addProduct("prod_${System.currentTimeMillis()}", productName, productPrice.toDoubleOrNull() ?: 0.0)
+                    viewModel.addProduct( productName, productPrice.toDoubleOrNull() ?: 0.0)
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar("Producto añadido")
-                        firestoreManager.getProducts { products = it }
                     }
                     showProductDialog = false
                 }) {
@@ -207,7 +207,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NoteItem(noteId: String, title: String, content: String, firestoreManager: FirestoreManager) {
+fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeViewModel) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showEditNoteDialog by remember { mutableStateOf(false) }
 
@@ -258,7 +258,7 @@ fun NoteItem(noteId: String, title: String, content: String, firestoreManager: F
             },
             confirmButton = {
                 Button(onClick = {
-                    firestoreManager.updateNote(noteId, title, content)
+                    viewModel.editNote(noteId, title, content)
                     showEditNoteDialog = false
                 }) {
                     Text("Guardar")
@@ -280,7 +280,7 @@ fun NoteItem(noteId: String, title: String, content: String, firestoreManager: F
             text = { Text("¿Estás seguro de que deseas eliminar esta nota?") },
             confirmButton = {
                 Button(onClick = {
-                    firestoreManager.deleteNote(noteId)
+                    viewModel.deleteNote(noteId)
                     showDeleteDialog = false
                 }) {
                     Text("Eliminar")
@@ -296,7 +296,7 @@ fun NoteItem(noteId: String, title: String, content: String, firestoreManager: F
 }
 
 @Composable
-fun ProductItem(productId: String, name: String, price: String, firestoreManager: FirestoreManager) {
+fun ProductItem(productId: String, name: String, price: String, viewModel: HomeViewModel) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showEditProductDialog by remember { mutableStateOf(false) }
     var products by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
@@ -332,7 +332,7 @@ fun ProductItem(productId: String, name: String, price: String, firestoreManager
             text = { Text("¿Estás seguro de que deseas eliminar este producto?") },
             confirmButton = {
                 Button(onClick = {
-                    firestoreManager.deleteProduct(productId)
+                    viewModel.deleteProduct(productId)
                     showDeleteDialog = false
                 }) {
                     Text("Eliminar")
@@ -376,9 +376,7 @@ fun ProductItem(productId: String, name: String, price: String, firestoreManager
             confirmButton = {
                 Button(onClick = {
                     // Actualiza el producto en Firestore
-                    firestoreManager.updateProduct(productId, productName, productPrice)
-                    // Refresca la lista de productos en memoria
-                    firestoreManager.getProducts { products = it }
+                    viewModel.editProduct(productId, productName, productPrice)
                     // Cierra el diálogo de edición
                     showEditProductDialog = false
                 }) {

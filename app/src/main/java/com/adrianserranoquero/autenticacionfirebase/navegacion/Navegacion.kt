@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.adrianserranoquero.autenticacionfirebase.data.AuthManager
+import com.adrianserranoquero.autenticacionfirebase.data.HomeViewModel
 import com.adrianserranoquero.autenticacionfirebase.screen.ForgotPasswordScreen
 import com.adrianserranoquero.autenticacionfirebase.screen.HomeScreen
 import com.adrianserranoquero.autenticacionfirebase.screen.LoginScreen
@@ -45,7 +46,8 @@ fun Navegacion(auth: AuthManager) {
                     navController.navigate(Login) {
                         popUpTo(Home){ inclusive = true }
                     }
-                }
+                },
+                viewModel = HomeViewModel()
             )
         }
 

@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.firebase.firestore.ktx)
 
     implementation(libs.coil)
+    implementation(libs.androidx.runtime.livedata)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
