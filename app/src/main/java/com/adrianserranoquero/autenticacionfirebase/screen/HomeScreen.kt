@@ -1,6 +1,8 @@
 package com.adrianserranoquero.autenticacionfirebase.screen
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -26,10 +28,8 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
     var showNoteDialog by remember { mutableStateOf(false) }
     var showProductDialog by remember { mutableStateOf(false) }
     val user = auth.getCurrentUser()
-    val firestoreManager = FirestoreManager()
     val notes by viewModel.notes.observeAsState(emptyList())
-    val products by viewModel.products.observeAsState((emptyList()))
-    val loading by viewModel.loading.observeAsState(true)
+    val products by viewModel.products.observeAsState(emptyList())
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -39,127 +39,96 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
     var productPrice by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        viewModel.loadData()
+        viewModel.loadData() // Solo carga los datos UNA VEZ
     }
 
-    if (!loading) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Gestión de Notas y Productos") },
-                    actions = {
-                        IconButton(onClick = { showDialog = true }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
-                                contentDescription = "Cerrar sesión"
-                            )
-                        }
-                    }
-                )
-            },
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Button(onClick = { showNoteDialog = true }) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir Nota")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Añadir Nota")
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Button(onClick = { showProductDialog = true }) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir Producto")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Añadir Producto")
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text("Notas Guardadas:", style = MaterialTheme.typography.headlineSmall)
-                LazyColumn {
-                    items(notes) { note ->
-                        NoteItem(
-                            noteId = note["id"].toString(),
-                            title = note["title"].toString(),
-                            content = note["content"].toString(),
-                            viewModel = viewModel
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Gestión de Notas y Productos") },
+                actions = {
+                    IconButton(onClick = { showDialog = true }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
+                            contentDescription = "Cerrar sesión"
                         )
                     }
                 }
+            )
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()) // ✅ Scroll en toda la pantalla
+                .padding(paddingValues)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Botones de acción
+            Button(onClick = { showNoteDialog = true }) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir Nota")
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Añadir Nota")
+            }
 
-                Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-                Text("Productos Guardados:", style = MaterialTheme.typography.headlineSmall)
-                LazyColumn {
-                    items(products) { product ->
-                        ProductItem(
-                            productId = product["id"].toString(),
-                            name = product["name"].toString(),
-                            price = product["price"].toString(),
-                            viewModel = viewModel
-                        )
-                    }
+            Button(onClick = { showProductDialog = true }) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir Producto")
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Añadir Producto")
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Sección de Notas
+            Text("Notas Guardadas:", style = MaterialTheme.typography.headlineSmall)
+            Column {
+                notes.distinctBy { it["id"] }.forEach { note -> // ✅ Evita duplicados
+                    NoteItem(
+                        noteId = note["id"].toString(),
+                        title = note["title"].toString(),
+                        content = note["content"].toString(),
+                        viewModel = viewModel
+                    )
                 }
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Sección de Productos
+            Text("Productos Guardados:", style = MaterialTheme.typography.headlineSmall)
+            Column {
+                products.distinctBy { it["id"] }.forEach { product -> // ✅ Evita duplicados
+                    ProductItem(
+                        productId = product["id"].toString(),
+                        name = product["name"].toString(),
+                        price = product["price"].toString(),
+                        viewModel = viewModel
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp)) // Espacio extra al final
         }
     }
 
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Cerrar Sesión") },
-            text = { Text("¿Estás seguro de que deseas cerrar sesión?") },
-            confirmButton = {
-                Button(onClick = {
-                    auth.signOut()
-                    navigateToLogin()
-                    showDialog = false
-                }) {
-                    Text("Aceptar")
-                }
-            },
-            dismissButton = {
-                Button(onClick = { showDialog = false }) {
-                    Text("Cancelar")
-                }
-            }
-        )
-    }
-
-
-
+    // Diálogo para añadir una nota
     if (showNoteDialog) {
         AlertDialog(
             onDismissRequest = { showNoteDialog = false },
             title = { Text("Añadir Nota") },
             text = {
                 Column {
-                    OutlinedTextField(
-                        value = noteTitle,
-                        onValueChange = { noteTitle = it },
-                        label = { Text("Título") }
-                    )
-                    OutlinedTextField(
-                        value = noteContent,
-                        onValueChange = { noteContent = it },
-                        label = { Text("Contenido") }
-                    )
+                    OutlinedTextField(value = noteTitle, onValueChange = { noteTitle = it }, label = { Text("Título") })
+                    OutlinedTextField(value = noteContent, onValueChange = { noteContent = it }, label = { Text("Contenido") })
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    firestoreManager.addNote(noteTitle, noteContent)
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Nota añadida")
-                        viewModel.addNote(noteTitle, noteContent)
-                    }
+                    viewModel.addNote(noteTitle, noteContent)
                     showNoteDialog = false
                 }) {
                     Text("Guardar")
@@ -173,30 +142,20 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
         )
     }
 
+    // Diálogo para añadir un producto
     if (showProductDialog) {
         AlertDialog(
             onDismissRequest = { showProductDialog = false },
             title = { Text("Añadir Producto") },
             text = {
                 Column {
-                    OutlinedTextField(
-                        value = productName,
-                        onValueChange = { productName = it },
-                        label = { Text("Nombre del Producto") }
-                    )
-                    OutlinedTextField(
-                        value = productPrice,
-                        onValueChange = { productPrice = it },
-                        label = { Text("Precio") }
-                    )
+                    OutlinedTextField(value = productName, onValueChange = { productName = it }, label = { Text("Nombre del Producto") })
+                    OutlinedTextField(value = productPrice, onValueChange = { productPrice = it }, label = { Text("Precio") })
                 }
             },
             confirmButton = {
                 Button(onClick = {
                     viewModel.addProduct(productName, productPrice.toDoubleOrNull() ?: 0.0)
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Producto añadido")
-                    }
                     showProductDialog = false
                 }) {
                     Text("Guardar")
@@ -211,7 +170,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
 fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeViewModel) {
     var showDeleteDialog by remember { mutableStateOf(false) }
