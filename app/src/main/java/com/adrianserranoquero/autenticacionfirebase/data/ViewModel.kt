@@ -17,6 +17,10 @@ class HomeViewModel : ViewModel() {
     private val _loading = MutableLiveData<Boolean>()
     val loading: LiveData<Boolean> = _loading
 
+    init {
+        loadData()
+    }
+
     fun loadData() { _loading.value = true
         viewModelScope.launch {
             firestoreManager.getNotes { _notes.value = it }
