@@ -6,17 +6,18 @@ class FirestoreManager {
     private val db = FirebaseFirestore.getInstance()
 
     // Agregar una nota a la colección "notas"
-    fun addNote(noteId: String, title: String, content: String) {
+    fun addNote(title: String, content: String) {
         val note = hashMapOf(
             "title" to title,
             "content" to content
         )
 
-        db.collection("notas").document(noteId)
-            .set(note)
+        db.collection("notas")
+            .add(note)  // Esto genera un ID automático en Firestore
             .addOnSuccessListener { println("Nota agregada correctamente") }
             .addOnFailureListener { e -> println("Error al agregar la nota: $e") }
     }
+
 
     // Obtener todas las notas y evitar valores nulos
     fun getNotes(callback: (List<Map<String, String>>) -> Unit) {

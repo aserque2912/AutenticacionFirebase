@@ -88,7 +88,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit) {
 
             Text("Notas Guardadas:", style = MaterialTheme.typography.headlineSmall)
             notes.forEach { note ->
-                Text("Título: ${note["name"]}, Contenido: ${note["email"]}")
+                Text("Título: ${note["title"]}, Contenido: ${note["content"]}")
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -142,7 +142,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit) {
             },
             confirmButton = {
                 Button(onClick = {
-                    firestoreManager.addNote("note_${System.currentTimeMillis()}", noteTitle, noteContent)
+                    firestoreManager.addNote(noteTitle, noteContent)
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar("Nota añadida")
                         firestoreManager.getNotes { notes = it }
