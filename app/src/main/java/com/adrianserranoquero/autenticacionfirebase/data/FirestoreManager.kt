@@ -18,25 +18,24 @@ class FirestoreManager {
             .addOnFailureListener { e -> println("Error al agregar la nota: $e") }
     }
 
-
     // Obtener todas las notas y evitar valores nulos
-    fun getNotes(callback: (List<Map<String, String>>) -> Unit) {
+    fun getNotes(callback: (List<Map<String, Any>>) -> Unit) {
         db.collection("notas")
             .get()
             .addOnSuccessListener { result ->
                 val noteList = result.documents.mapNotNull { document ->
+                    val noteId = document.id  // Agregar el ID del documento
                     val title = document.getString("title") ?: "Sin título"
                     val content = document.getString("content") ?: "Sin contenido"
 
-                    if (title != "Sin título" || content != "Sin contenido") {
-                        mapOf("title" to title, "content" to content)
-                    } else {
-                        null // Ignora notas vacías
-                    }
+                    mapOf("id" to noteId, "title" to title, "content" to content)
                 }
                 callback(noteList)
             }
-            .addOnFailureListener { e -> println("Error al obtener las notas: $e") }
+            .addOnFailureListener { e ->
+                println("Error al obtener notas: $e")
+                callback(emptyList())  // Evita que la UI se quede sin actualizar en caso de error
+            }
     }
 
     // Agregar un producto a la colección "productos"
@@ -58,17 +57,58 @@ class FirestoreManager {
             .get()
             .addOnSuccessListener { result ->
                 val productList = result.documents.mapNotNull { document ->
+                    val productId = document.id
                     val name = document.getString("name") ?: "Sin nombre"
                     val price = document.getDouble("price") ?: 0.0
 
-                    if (name != "Sin nombre" || price != 0.0) {
-                        mapOf("name" to name, "price" to price)
-                    } else {
-                        null // Ignora productos vacíos
-                    }
+                    mapOf("id" to productId, "name" to name, "price" to price)
                 }
                 callback(productList)
             }
             .addOnFailureListener { e -> println("Error al obtener productos: $e") }
+    }
+
+    // Modificar una nota en Firestore
+    fun updateNote(noteId: String, newTitle: String, newContent: String) {
+        val updatedNote = mapOf(
+            "title" to newTitle,
+            "content" to newContent
+        )
+
+        db.collection("notas").document(noteId)
+            .update(updatedNote)
+            .addOnSuccessListener { println("Nota actualizada correctamente") }
+            .addOnFailureListener { e -> println("Error al actualizar la nota: $e") }
+    }
+
+    // Eliminar una nota en Firestore
+    fun deleteNote(noteId: String) {
+        db.collection("notas")
+            .document(noteId)
+            .delete()
+            .addOnSuccessListener { println("Nota eliminada correctamente") }
+            .addOnFailureListener { e -> println("Error al eliminar la nota: $e") }
+    }
+
+
+    // Modificar un producto en Firestore
+    fun updateProduct(productId: String, newName: String, newPrice: Double) {
+        val updatedProduct = mapOf(
+            "name" to newName,
+            "price" to newPrice
+        )
+
+        db.collection("productos").document(productId)
+            .update(updatedProduct)
+            .addOnSuccessListener { println("Producto actualizado correctamente") }
+            .addOnFailureListener { e -> println("Error al actualizar el producto: $e") }
+    }
+
+    // Eliminar un producto en Firestore
+    fun deleteProduct(productId: String) {
+        db.collection("productos").document(productId)
+            .delete()
+            .addOnSuccessListener { println("Producto eliminado correctamente") }
+            .addOnFailureListener { e -> println("Error al eliminar el producto: $e") }
     }
 }
