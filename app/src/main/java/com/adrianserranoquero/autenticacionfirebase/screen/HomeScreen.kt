@@ -32,13 +32,13 @@ private fun HomeTopBar(
 ) {
     Column {
         TopAppBar(
-            title = { 
+            title = {
                 Text(
                     title,
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold
                     )
-                ) 
+                )
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -54,7 +54,7 @@ private fun HomeTopBar(
                 }
             }
         )
-        
+
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChange,
@@ -95,32 +95,32 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
 
     var searchQuery by remember { mutableStateOf("") }
     var showSortMenu by remember { mutableStateOf(false) }
-    var currentSort by remember { mutableStateOf("none") } // "none", "name", "price"
+    var currentSort by remember { mutableStateOf("none") }
 
     var showTotalValue by remember { mutableStateOf(false) }
 
-    val totalValue = products.sumOf { 
-        it["price"].toString().toDoubleOrNull() ?: 0.0 
+    val totalValue = products.sumOf {
+        it["price"].toString().toDoubleOrNull() ?: 0.0
     }
 
-    // Filtrar notas
     val filteredNotes = notes.filter { note ->
         note["title"].toString().contains(searchQuery, ignoreCase = true) ||
-        note["content"].toString().contains(searchQuery, ignoreCase = true)
+                note["content"].toString().contains(searchQuery, ignoreCase = true)
     }
 
-    // Filtrar y ordenar productos
     val filteredProducts = when (currentSort) {
         "price_asc" -> products
             .filter { product ->
                 product["name"].toString().contains(searchQuery, ignoreCase = true)
             }
             .sortedBy { it["price"].toString().toDoubleOrNull() ?: 0.0 }
+
         "price_desc" -> products
             .filter { product ->
                 product["name"].toString().contains(searchQuery, ignoreCase = true)
             }
             .sortedByDescending { it["price"].toString().toDoubleOrNull() ?: 0.0 }
+
         else -> products
             .filter { product ->
                 product["name"].toString().contains(searchQuery, ignoreCase = true)
@@ -146,7 +146,6 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
         }
     }
 
-    // Añadir el diálogo de confirmación para cerrar sesión
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
@@ -243,7 +242,6 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
                 }
             }
 
-            // Después de la AnimatedVisibility del resumen, añadir:
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -291,7 +289,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Ordenar")
                 }
-                
+
                 DropdownMenu(
                     expanded = showSortMenu,
                     onDismissRequest = { showSortMenu = false }
@@ -328,7 +326,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
                     color = MaterialTheme.colorScheme.primary
                 )
             )
-            
+
             if (filteredNotes.isEmpty() && searchQuery.isNotEmpty()) {
                 Text(
                     "No se encontraron notas",
@@ -372,7 +370,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
                     val productId = product["id"].toString()
                     val productName = product["name"].toString()
                     val productPrice = product["price"].toString()
-                    
+
                     ProductItem(
                         productId = productId,
                         name = productName,
@@ -382,24 +380,30 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp)) // Espacio extra al final
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 
     // Diálogo para añadir una nota
     if (showNoteDialog) {
         AlertDialog(
-            onDismissRequest = { 
+            onDismissRequest = {
                 // Limpiar campos al cerrar
                 noteTitle = ""
                 noteContent = ""
-                showNoteDialog = false 
+                showNoteDialog = false
             },
             title = { Text("Añadir Nota") },
             text = {
                 Column {
-                    OutlinedTextField(value = noteTitle, onValueChange = { noteTitle = it }, label = { Text("Título") })
-                    OutlinedTextField(value = noteContent, onValueChange = { noteContent = it }, label = { Text("Contenido") })
+                    OutlinedTextField(
+                        value = noteTitle,
+                        onValueChange = { noteTitle = it },
+                        label = { Text("Título") })
+                    OutlinedTextField(
+                        value = noteContent,
+                        onValueChange = { noteContent = it },
+                        label = { Text("Contenido") })
                 }
             },
             confirmButton = {
@@ -420,11 +424,11 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
                 }
             },
             dismissButton = {
-                Button(onClick = { 
+                Button(onClick = {
                     // Limpiar campos al cancelar
                     noteTitle = ""
                     noteContent = ""
-                    showNoteDialog = false 
+                    showNoteDialog = false
                 }) {
                     Text("Cancelar")
                 }
@@ -478,7 +482,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
 fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeViewModel) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showEditNoteDialog by remember { mutableStateOf(false) }
-    
+
     // Inicializar los estados con los valores actuales usando remember(title, content)
     var editedTitle by remember(title) { mutableStateOf(title) }
     var editedContent by remember(content) { mutableStateOf(content) }
@@ -507,7 +511,7 @@ fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeView
                 text = content,
                 style = MaterialTheme.typography.bodyMedium
             )
-            
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -525,7 +529,7 @@ fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeView
                 ) {
                     Text("Editar")
                 }
-                
+
                 Button(
                     onClick = { showDeleteDialog = true },
                     modifier = Modifier.weight(1f),
@@ -602,14 +606,14 @@ fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeView
 
 @Composable
 fun ProductItem(
-    productId: String, 
-    name: String, 
-    price: String, 
+    productId: String,
+    name: String,
+    price: String,
     viewModel: HomeViewModel
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showEditProductDialog by remember { mutableStateOf(false) }
-    
+
     // Inicializar los estados con los valores actuales
     var editedProductName by remember(name) { mutableStateOf(name) }
     var editedProductPrice by remember(price) { mutableStateOf(price) }
@@ -638,7 +642,7 @@ fun ProductItem(
                 text = "Precio: ${String.format("%.2f", price.toDoubleOrNull() ?: 0.0)} €",
                 style = MaterialTheme.typography.bodyMedium
             )
-            
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -656,7 +660,7 @@ fun ProductItem(
                 ) {
                     Text("Editar")
                 }
-                
+
                 Button(
                     onClick = { showDeleteDialog = true },
                     modifier = Modifier.weight(1f),
