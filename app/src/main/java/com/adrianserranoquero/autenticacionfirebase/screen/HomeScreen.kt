@@ -175,6 +175,10 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
 fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeViewModel) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showEditNoteDialog by remember { mutableStateOf(false) }
+    
+    // Inicializar los estados con los valores actuales
+    var editedTitle by remember { mutableStateOf(title) }
+    var editedContent by remember { mutableStateOf(content) }
 
     Card(
         modifier = Modifier
@@ -201,29 +205,26 @@ fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeView
     }
 
     if (showEditNoteDialog) {
-        var title by remember { mutableStateOf("") }
-        var content by remember { mutableStateOf("") }
-
         AlertDialog(
             onDismissRequest = { showEditNoteDialog = false },
             title = { Text("Editar Nota") },
             text = {
                 Column {
                     OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
+                        value = editedTitle,
+                        onValueChange = { editedTitle = it },
                         label = { Text("Título") }
                     )
                     OutlinedTextField(
-                        value = content,
-                        onValueChange = { content = it },
+                        value = editedContent,
+                        onValueChange = { editedContent = it },
                         label = { Text("Contenido") }
                     )
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    viewModel.editNote(noteId, title, content)
+                    viewModel.editNote(noteId, editedTitle, editedContent)
                     showEditNoteDialog = false
                 }) {
                     Text("Guardar")
@@ -264,7 +265,10 @@ fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeView
 fun ProductItem(productId: String, name: String, price: String, viewModel: HomeViewModel) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showEditProductDialog by remember { mutableStateOf(false) }
-    var products by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    
+    // Inicializar los estados con los valores actuales
+    var editedProductName by remember { mutableStateOf(name) }
+    var editedProductPrice by remember { mutableStateOf(price) }
 
     Card(
         modifier = Modifier
@@ -312,37 +316,30 @@ fun ProductItem(productId: String, name: String, price: String, viewModel: HomeV
     }
 
     if (showEditProductDialog) {
-        var productName by remember { mutableStateOf("") }
-        var productPrice by remember { mutableStateOf(0.0) }
-
         AlertDialog(
             onDismissRequest = { showEditProductDialog = false },
             title = { Text("Editar Producto") },
             text = {
                 Column {
-                    // Campo para el nombre del producto
                     OutlinedTextField(
-                        value = productName,
-                        onValueChange = { productName = it },
+                        value = editedProductName,
+                        onValueChange = { editedProductName = it },
                         label = { Text("Nombre") }
                     )
-
-                    // Campo para el precio del producto (convierte a Double)
                     OutlinedTextField(
-                        value = productPrice.toString(),
-                        onValueChange = {
-                            // Convierte el valor ingresado a Double
-                            productPrice = it.toDoubleOrNull() ?: 0.0
-                        },
+                        value = editedProductPrice,
+                        onValueChange = { editedProductPrice = it },
                         label = { Text("Precio") }
                     )
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    // Actualiza el producto en Firestore
-                    viewModel.editProduct(productId, productName, productPrice)
-                    // Cierra el diálogo de edición
+                    viewModel.editProduct(
+                        productId, 
+                        editedProductName, 
+                        editedProductPrice.toDoubleOrNull() ?: 0.0
+                    )
                     showEditProductDialog = false
                 }) {
                     Text("Guardar")
