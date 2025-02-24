@@ -42,6 +42,29 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
         viewModel.loadData() // Solo carga los datos UNA VEZ
     }
 
+    // Añadir el diálogo de confirmación para cerrar sesión
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Cerrar Sesión") },
+            text = { Text("¿Estás seguro que deseas cerrar sesión?") },
+            confirmButton = {
+                Button(onClick = {
+                    auth.signOut()
+                    navigateToLogin()
+                    showDialog = false
+                }) {
+                    Text("Sí, cerrar sesión")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
