@@ -44,8 +44,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.adrianserranoquero.autenticacionfirebase.data.AuthManager
 import com.adrianserranoquero.autenticacionfirebase.data.AuthRes
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 
@@ -145,24 +147,58 @@ fun SignUpScreen(auth: AuthManager, navigateToLogin: () -> Unit, navigateToHome:
 
 suspend fun signUp(navigateToHome: () -> Unit, auth: AuthManager, email: String, password: String, context: Context) {
     if (email.isNotEmpty() && password.isNotEmpty()) {
+        // Validar la contraseña
+        if (password.length < 6) {
+            Toast.makeText(context, "La contraseña debe tener al menos 6 caracteres", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         when (
             val result = withContext(Dispatchers.IO){
                 auth.createUserWithEmailAndPassword(email, password)
             }
         ) {
             is AuthRes.Success -> {
-                Toast.makeText(context, "Usuario creado", Toast.LENGTH_SHORT).show()
-                navigateToHome()
+                val userId = auth.getCurrentUser()?.uid
+                if (userId != null) {
+                    try {
+                        withContext(Dispatchers.IO) {
+                            val db = FirebaseFirestore.getInstance()
+                            val userDoc = db.collection("users").document(userId)
+                            
+                            userDoc.set(
+                                mapOf(
+                                    "email" to email,
+                                    "notes" to emptyList<Map<String, Any>>(),
+                                    "products" to emptyList<Map<String, Any>>()
+                                )
+                            ).await()
+                        }
+                        
+                        Toast.makeText(context, "Usuario creado correctamente", Toast.LENGTH_SHORT).show()
+                        navigateToHome()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Error al inicializar datos: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(context, "Error al crear usuario", Toast.LENGTH_SHORT).show()
+                }
             }
-
             is AuthRes.Error -> {
-                Toast.makeText(context, "Error al crear usuario", Toast.LENGTH_SHORT).show()
+                val errorMessage = when {
+                    result.errorMessage.contains("The email address is already in use") -> 
+                        "Este correo electrónico ya está registrado"
+                    result.errorMessage.contains("The email address is badly formatted") -> 
+                        "El formato del correo electrónico no es válido"
+                    result.errorMessage.contains("The given password is invalid") -> 
+                        "La contraseña debe tener al menos 6 caracteres"
+                    else -> "Error al crear usuario: ${result.errorMessage}"
+                }
+                Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
             }
         }
+    } else {
+        Toast.makeText(context, "Por favor, rellena todos los campos", Toast.LENGTH_SHORT).show()
     }
-    else {
-        Toast.makeText(context, "Llene todos los campos", Toast.LENGTH_SHORT).show()
-    }
-
 }
 

@@ -110,33 +110,39 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
         it["price"].toString().toDoubleOrNull() ?: 0.0 
     }
 
-    // Primero filtramos y luego ordenamos manteniendo los IDs originales
-    val filteredProducts = products
-        .distinctBy { it["id"] }
-        .filter { product ->
-            product["name"].toString().contains(searchQuery, ignoreCase = true)
-        }
-        .let { filtered ->
-            when (currentSort) {
-                "name_asc" -> filtered.sortedWith(
-                    compareBy { it["name"].toString().lowercase() }
-                )
-                "name_desc" -> filtered.sortedWith(
-                    compareByDescending { it["name"].toString().lowercase() }
-                )
-                "price_asc" -> filtered.sortedWith(
-                    compareBy { it["price"].toString().toDoubleOrNull() ?: 0.0 }
-                )
-                "price_desc" -> filtered.sortedWith(
-                    compareByDescending { it["price"].toString().toDoubleOrNull() ?: 0.0 }
-                )
-                else -> filtered
+    // Filtrar notas
+    val filteredNotes = notes.filter { note ->
+        note["title"].toString().contains(searchQuery, ignoreCase = true) ||
+        note["content"].toString().contains(searchQuery, ignoreCase = true)
+    }
+
+    // Filtrar y ordenar productos
+    val filteredProducts = when (currentSort) {
+        "price_asc" -> products
+            .filter { product ->
+                product["name"].toString().contains(searchQuery, ignoreCase = true)
             }
-        }
+            .sortedBy { it["price"].toString().toDoubleOrNull() ?: 0.0 }
+        "price_desc" -> products
+            .filter { product ->
+                product["name"].toString().contains(searchQuery, ignoreCase = true)
+            }
+            .sortedByDescending { it["price"].toString().toDoubleOrNull() ?: 0.0 }
+        else -> products
+            .filter { product ->
+                product["name"].toString().contains(searchQuery, ignoreCase = true)
+            }
+    }
 
     LaunchedEffect(Unit) {
         try {
-            viewModel.loadData()
+            // Asegurarse de que el usuario está autenticado antes de cargar datos
+            auth.getCurrentUser()?.let {
+                viewModel.loadData()
+            } ?: run {
+                // Si no hay usuario, navegar al login
+                navigateToLogin()
+            }
         } catch (e: Exception) {
             coroutineScope.launch {
                 snackbarHostState.showSnackbar(
@@ -305,20 +311,6 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Por nombre (A-Z)") },
-                        onClick = {
-                            currentSort = "name_asc"
-                            showSortMenu = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Por nombre (Z-A)") },
-                        onClick = {
-                            currentSort = "name_desc"
-                            showSortMenu = false
-                        }
-                    )
-                    DropdownMenuItem(
                         text = { Text("Precio: Menor a mayor") },
                         onClick = {
                             currentSort = "price_asc"
@@ -344,7 +336,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
                 )
             )
             
-            if (notes.isEmpty() && searchQuery.isNotEmpty()) {
+            if (filteredNotes.isEmpty() && searchQuery.isNotEmpty()) {
                 Text(
                     "No se encontraron notas",
                     style = MaterialTheme.typography.bodyMedium,
@@ -353,7 +345,7 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
             }
 
             Column {
-                notes.forEach { note ->
+                filteredNotes.forEach { note ->
                     NoteItem(
                         noteId = note["id"].toString(),
                         title = note["title"].toString(),
@@ -494,9 +486,9 @@ fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeView
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showEditNoteDialog by remember { mutableStateOf(false) }
     
-    // Inicializar los estados con los valores actuales
-    var editedTitle by remember { mutableStateOf(title) }
-    var editedContent by remember { mutableStateOf(content) }
+    // Inicializar los estados con los valores actuales usando remember(title, content)
+    var editedTitle by remember(title) { mutableStateOf(title) }
+    var editedContent by remember(content) { mutableStateOf(content) }
 
     Card(
         modifier = Modifier
@@ -567,6 +559,7 @@ fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeView
                         onValueChange = { editedTitle = it },
                         label = { Text("Título") }
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = editedContent,
                         onValueChange = { editedContent = it },
@@ -576,8 +569,10 @@ fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeView
             },
             confirmButton = {
                 Button(onClick = {
-                    viewModel.editNote(noteId, editedTitle, editedContent)
-                    showEditNoteDialog = false
+                    if (editedTitle.isNotEmpty() && editedContent.isNotEmpty()) {
+                        viewModel.editNote(noteId, editedTitle, editedContent)
+                        showEditNoteDialog = false
+                    }
                 }) {
                     Text("Guardar")
                 }
