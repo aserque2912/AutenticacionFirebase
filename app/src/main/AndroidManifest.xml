@@ -6,9 +6,9 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@drawable/balon"
+        android:icon="@drawable/diario"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/balon"
+        android:roundIcon="@drawable/diario"
         android:supportsRtl="true"
         tools:targetApi="31">
         <activity

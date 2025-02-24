@@ -5,9 +5,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -20,6 +27,61 @@ import com.adrianserranoquero.autenticacionfirebase.data.AuthManager
 import com.adrianserranoquero.autenticacionfirebase.data.FirestoreManager
 import com.adrianserranoquero.autenticacionfirebase.data.HomeViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.animation.*
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeTopBar(
+    title: String,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onLogoutClick: () -> Unit
+) {
+    Column {
+        TopAppBar(
+            title = { 
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    )
+                ) 
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ),
+            actions = {
+                IconButton(onClick = onLogoutClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
+                        contentDescription = "Cerrar sesión",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+        )
+        
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            placeholder = { Text("Buscar notas y productos...") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
+            trailingIcon = if (searchQuery.isNotEmpty()) {
+                {
+                    IconButton(onClick = { onSearchQueryChange("") }) {
+                        Icon(Icons.Default.Clear, "Limpiar búsqueda")
+                    }
+                }
+            } else null,
+            singleLine = true,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,8 +100,51 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
     var productName by remember { mutableStateOf("") }
     var productPrice by remember { mutableStateOf("") }
 
+    var searchQuery by remember { mutableStateOf("") }
+    var showSortMenu by remember { mutableStateOf(false) }
+    var currentSort by remember { mutableStateOf("none") } // "none", "name", "price"
+
+    var showTotalValue by remember { mutableStateOf(false) }
+
+    val totalValue = products.sumOf { 
+        it["price"].toString().toDoubleOrNull() ?: 0.0 
+    }
+
+    // Primero filtramos y luego ordenamos manteniendo los IDs originales
+    val filteredProducts = products
+        .distinctBy { it["id"] }
+        .filter { product ->
+            product["name"].toString().contains(searchQuery, ignoreCase = true)
+        }
+        .let { filtered ->
+            when (currentSort) {
+                "name_asc" -> filtered.sortedWith(
+                    compareBy { it["name"].toString().lowercase() }
+                )
+                "name_desc" -> filtered.sortedWith(
+                    compareByDescending { it["name"].toString().lowercase() }
+                )
+                "price_asc" -> filtered.sortedWith(
+                    compareBy { it["price"].toString().toDoubleOrNull() ?: 0.0 }
+                )
+                "price_desc" -> filtered.sortedWith(
+                    compareByDescending { it["price"].toString().toDoubleOrNull() ?: 0.0 }
+                )
+                else -> filtered
+            }
+        }
+
     LaunchedEffect(Unit) {
-        viewModel.loadData() // Solo carga los datos UNA VEZ
+        try {
+            viewModel.loadData()
+        } catch (e: Exception) {
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(
+                    message = "Error al cargar los datos: ${e.message}",
+                    duration = SnackbarDuration.Short
+                )
+            }
+        }
     }
 
     // Añadir el diálogo de confirmación para cerrar sesión
@@ -67,49 +172,188 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Gestión de Notas y Productos") },
-                actions = {
-                    IconButton(onClick = { showDialog = true }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
-                            contentDescription = "Cerrar sesión"
-                        )
-                    }
-                }
+            HomeTopBar(
+                title = "Gestión de Notas y Productos",
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                onLogoutClick = { showDialog = true }
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        floatingActionButton = {
+            SmallFloatingActionButton(
+                onClick = { showTotalValue = !showTotalValue },
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Ver total"
+                    )
+                    if (!showTotalValue) {
+                        Text("€", modifier = Modifier.padding(start = 4.dp))
+                    }
+                }
+            }
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()) // ✅ Scroll en toda la pantalla
+                .verticalScroll(rememberScrollState())
                 .padding(paddingValues)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(16.dp)
         ) {
-            // Botones de acción
-            Button(onClick = { showNoteDialog = true }) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir Nota")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Añadir Nota")
+            // Mostrar el valor total si está activado
+            AnimatedVisibility(
+                visible = showTotalValue,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            "Resumen de Productos",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            "Total de productos: ${products.size}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "Importe total: ${String.format("%.2f", totalValue)}€",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            // Después de la AnimatedVisibility del resumen, añadir:
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { showNoteDialog = true },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Añadir Nota")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Añadir Nota")
+                }
 
-            Button(onClick = { showProductDialog = true }) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir Producto")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Añadir Producto")
+                Button(
+                    onClick = { showProductDialog = true },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Añadir Producto")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Añadir Producto")
+                }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            // Botón de ordenación para productos
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = { showSortMenu = true }
+                ) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Ordenar")
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Ordenar")
+                }
+                
+                DropdownMenu(
+                    expanded = showSortMenu,
+                    onDismissRequest = { showSortMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Sin ordenar") },
+                        onClick = {
+                            currentSort = "none"
+                            showSortMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Por nombre (A-Z)") },
+                        onClick = {
+                            currentSort = "name_asc"
+                            showSortMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Por nombre (Z-A)") },
+                        onClick = {
+                            currentSort = "name_desc"
+                            showSortMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Precio: Menor a mayor") },
+                        onClick = {
+                            currentSort = "price_asc"
+                            showSortMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Precio: Mayor a menor") },
+                        onClick = {
+                            currentSort = "price_desc"
+                            showSortMenu = false
+                        }
+                    )
+                }
+            }
 
-            // Sección de Notas
-            Text("Notas Guardadas:", style = MaterialTheme.typography.headlineSmall)
+            // Mostrar resultados filtrados
+            Text(
+                "Notas Guardadas",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            )
+            
+            if (notes.isEmpty() && searchQuery.isNotEmpty()) {
+                Text(
+                    "No se encontraron notas",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
             Column {
-                notes.distinctBy { it["id"] }.forEach { note -> // ✅ Evita duplicados
+                notes.forEach { note ->
                     NoteItem(
                         noteId = note["id"].toString(),
                         title = note["title"].toString(),
@@ -119,16 +363,35 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Sección de Productos
-            Text("Productos Guardados:", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                "Productos Guardados",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            )
+
+            if (filteredProducts.isEmpty() && searchQuery.isNotEmpty()) {
+                Text(
+                    "No se encontraron productos",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
+            // Vista de productos en grid o lista
             Column {
-                products.distinctBy { it["id"] }.forEach { product -> // ✅ Evita duplicados
+                filteredProducts.forEach { product ->
+                    val productId = product["id"].toString()
+                    val productName = product["name"].toString()
+                    val productPrice = product["price"].toString()
+                    
                     ProductItem(
-                        productId = product["id"].toString(),
-                        name = product["name"].toString(),
-                        price = product["price"].toString(),
+                        productId = productId,
+                        name = productName,
+                        price = productPrice,
                         viewModel = viewModel
                     )
                 }
@@ -141,7 +404,12 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
     // Diálogo para añadir una nota
     if (showNoteDialog) {
         AlertDialog(
-            onDismissRequest = { showNoteDialog = false },
+            onDismissRequest = { 
+                // Limpiar campos al cerrar
+                noteTitle = ""
+                noteContent = ""
+                showNoteDialog = false 
+            },
             title = { Text("Añadir Nota") },
             text = {
                 Column {
@@ -151,14 +419,28 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
             },
             confirmButton = {
                 Button(onClick = {
-                    viewModel.addNote(noteTitle, noteContent)
-                    showNoteDialog = false
+                    if (noteTitle.isNotEmpty() && noteContent.isNotEmpty()) {
+                        viewModel.addNote(noteTitle, noteContent)
+                        // Limpiar campos después de guardar
+                        noteTitle = ""
+                        noteContent = ""
+                        showNoteDialog = false
+                    } else {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Por favor, rellena todos los campos")
+                        }
+                    }
                 }) {
                     Text("Guardar")
                 }
             },
             dismissButton = {
-                Button(onClick = { showNoteDialog = false }) {
+                Button(onClick = { 
+                    // Limpiar campos al cancelar
+                    noteTitle = ""
+                    noteContent = ""
+                    showNoteDialog = false 
+                }) {
                     Text("Cancelar")
                 }
             }
@@ -172,14 +454,28 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
             title = { Text("Añadir Producto") },
             text = {
                 Column {
-                    OutlinedTextField(value = productName, onValueChange = { productName = it }, label = { Text("Nombre del Producto") })
-                    OutlinedTextField(value = productPrice, onValueChange = { productPrice = it }, label = { Text("Precio") })
+                    OutlinedTextField(
+                        value = productName,
+                        onValueChange = { productName = it },
+                        label = { Text("Nombre del Producto") }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = productPrice,
+                        onValueChange = { productPrice = it },
+                        label = { Text("Precio") }
+                    )
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    viewModel.addProduct(productName, productPrice.toDoubleOrNull() ?: 0.0)
-                    showProductDialog = false
+                    if (productName.isNotEmpty() && productPrice.isNotEmpty()) {
+                        val price = productPrice.toDoubleOrNull() ?: 0.0
+                        viewModel.addProduct(productName, price)
+                        productName = ""
+                        productPrice = ""
+                        showProductDialog = false
+                    }
                 }) {
                     Text("Guardar")
                 }
@@ -193,7 +489,6 @@ fun HomeScreen(auth: AuthManager, navigateToLogin: () -> Unit, viewModel: HomeVi
     }
 }
 
-
 @Composable
 fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeViewModel) {
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -206,21 +501,55 @@ fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeView
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(6.dp)
+            .padding(vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(4.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text(text = content, fontSize = 14.sp)
-
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold
+                )
+            )
+            Text(
+                text = content,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(onClick = { showEditNoteDialog = true }) {
+                Button(
+                    onClick = { showEditNoteDialog = true },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
                     Text("Editar")
                 }
-                Button(onClick = { showDeleteDialog = true }) {
+                
+                Button(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) {
                     Text("Eliminar")
                 }
             }
@@ -261,7 +590,6 @@ fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeView
         )
     }
 
-
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -285,32 +613,71 @@ fun NoteItem(noteId: String, title: String, content: String, viewModel: HomeView
 }
 
 @Composable
-fun ProductItem(productId: String, name: String, price: String, viewModel: HomeViewModel) {
+fun ProductItem(
+    productId: String, 
+    name: String, 
+    price: String, 
+    viewModel: HomeViewModel
+) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showEditProductDialog by remember { mutableStateOf(false) }
     
     // Inicializar los estados con los valores actuales
-    var editedProductName by remember { mutableStateOf(name) }
-    var editedProductPrice by remember { mutableStateOf(price) }
+    var editedProductName by remember(name) { mutableStateOf(name) }
+    var editedProductPrice by remember(price) { mutableStateOf(price) }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(6.dp)
+            .padding(vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(4.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text(text = "Precio: $price €", fontSize = 14.sp)
-
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold
+                )
+            )
+            Text(
+                text = "Precio: ${String.format("%.2f", price.toDoubleOrNull() ?: 0.0)} €",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(onClick = { showEditProductDialog = true }) {
+                Button(
+                    onClick = { showEditProductDialog = true },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
                     Text("Editar")
                 }
-                Button(onClick = { showDeleteDialog = true }) {
+                
+                Button(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) {
                     Text("Eliminar")
                 }
             }
@@ -349,6 +716,7 @@ fun ProductItem(productId: String, name: String, price: String, viewModel: HomeV
                         onValueChange = { editedProductName = it },
                         label = { Text("Nombre") }
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = editedProductPrice,
                         onValueChange = { editedProductPrice = it },
@@ -358,11 +726,8 @@ fun ProductItem(productId: String, name: String, price: String, viewModel: HomeV
             },
             confirmButton = {
                 Button(onClick = {
-                    viewModel.editProduct(
-                        productId, 
-                        editedProductName, 
-                        editedProductPrice.toDoubleOrNull() ?: 0.0
-                    )
+                    val price = editedProductPrice.toDoubleOrNull() ?: 0.0
+                    viewModel.editProduct(productId, editedProductName, price)
                     showEditProductDialog = false
                 }) {
                     Text("Guardar")
@@ -375,7 +740,6 @@ fun ProductItem(productId: String, name: String, price: String, viewModel: HomeV
             }
         )
     }
-
 }
 
 

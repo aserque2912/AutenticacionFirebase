@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.adrianserranoquero.autenticacionfirebase.R
@@ -107,30 +108,44 @@ fun LoginScreen(
         contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(40.dp))
+            
             Image(
-                painter = painterResource(id = R.drawable.balon),
-                contentDescription = "Firebase",
-                modifier = Modifier.size(100.dp)
+                painter = painterResource(id = R.drawable.diario),
+                contentDescription = "Logo",
+                modifier = Modifier
+                    .size(120.dp)
+                    .padding(8.dp)
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "Autenticación Firebase",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                text = "Gestión de Notas y Productos",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.padding(vertical = 16.dp),
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Card(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                elevation = CardDefaults.cardElevation(6.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                elevation = CardDefaults.cardElevation(8.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -203,7 +218,8 @@ fun LoginScreen(
                         },
                         text = "Continuar como invitado",
                         icon = R.drawable.ic_incognito,
-                        color = Color(0xFF363636)
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        textColor = MaterialTheme.colorScheme.onSecondaryContainer
                     )
 
                     Spacer(modifier = Modifier.height(15.dp))
@@ -214,7 +230,8 @@ fun LoginScreen(
                         },
                         text = "Continuar con Google",
                         icon = R.drawable.ic_google,
-                        color = Color(0xFFF1F1F1)
+                        color = Color(0xFFF1F1F1),
+                        textColor = Color.Black
                     )
                 }
             }
@@ -272,7 +289,7 @@ suspend fun signIn(email: String, password: String, context: Context, auth: Auth
 }
 
 @Composable
-fun SocialMediaButton(onClick: () -> Unit, text: String, icon: Int, color: Color, ) {
+fun SocialMediaButton(onClick: () -> Unit, text: String, icon: Int, color: Color, textColor: Color) {
     var click by remember { mutableStateOf(false) }
     Surface(
         onClick = onClick,
@@ -293,7 +310,7 @@ fun SocialMediaButton(onClick: () -> Unit, text: String, icon: Int, color: Color
                 tint = Color.Unspecified
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "$text", color = if(icon == R.drawable.ic_incognito) Color.White else Color.Black)
+            Text(text = "$text", color = textColor)
             click = true
         }
     }
