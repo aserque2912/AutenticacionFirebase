@@ -3,11 +3,6 @@ package com.adrianserranoquero.autenticacionfirebase.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
@@ -22,9 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.adrianserranoquero.autenticacionfirebase.data.AuthManager
-import com.adrianserranoquero.autenticacionfirebase.data.FirestoreManager
 import com.adrianserranoquero.autenticacionfirebase.data.HomeViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.animation.*
